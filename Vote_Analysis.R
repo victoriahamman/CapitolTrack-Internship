@@ -15,6 +15,18 @@ library(stringr)
 library(DBI)
 
 
+#--- Clean Data ---#
+
+#turns all column names to lowercase and adds underscores
+member_data <- member_data %>% clean_names()
+vote_data <- vote_data %>% clean_names()
+dbListFields(db, "Votes")
+
+#remove vacancies/no member rows from member_data
+member_data <- member_data %>% 
+  filter(!str_detect(f_name, regex("vacancy|assigned", ignore_case=T)))
+
+
 #---Connect to SQLite Database---#
 db <- dbConnect(SQLite(), "vote_anaysis.db")
 getwd()
@@ -26,17 +38,6 @@ dbWriteTable(db, "Votes", vote_data, overwrite=T, header=T)
 dbListTables(db)
 dbListFields(db, "Members")
 dbListFields(db, "Votes")
-
-
-#--- Clean Data ---#
-
-#turns all column names to lowercase and adds underscores
-member_data <- member_data %>% clean_names()
-vote_data <- vote_data %>% clean_names()
-
-#remove vacancies/no member rows from member_data
-member_data <- member_data %>% 
-  filter(!str_detect(f_name, regex("vacancy|assigned", ignore_case=T)))
 
 
 #---Descriptive Analysis---#
@@ -66,17 +67,18 @@ labels <- paste(c("Failed", "Passed"), pct)
 pie(dist, labels=paste(labels, "%", sep=""), col=c('red','lightgreen'))
 
 
+
 #---Analysis by Party---#
 
 #make joined data by member ID
 joined_data <- dbGetQuery(db, 'SELECT v.vote_date, v.originator, v.outcome,
                v.location_code, v.measure, v.author, v.member_id,
-               M.l_name, M.house, M.district, M.party
-               FROM Votes V LEFT JOIN Members M
-               ON V.member_id = M.member_id')
+               M.f_name, M.l_name, M.house, M.district, M.party
+               FROM Votes v LEFT JOIN Members M
+               ON v.member_id = M.member_id')
 dbWriteTable(db, "Joined_Data", joined_data, overwrite=T)
 dbListTables(db)
-dbGetQuery(db, 'SELECT * FROM Joined_Data LIMIT 10')
+view(dbGetQuery(db, 'SELECT * FROM Joined_Data'))
 
 ##fail distribution
 dem_fails <- dbGetQuery(db, 'SELECT * FROM Joined_Data WHERE party="D" AND outcome="F"')
@@ -110,7 +112,10 @@ labels <- paste(c("Democrat Passes", "Republican Passes"),pct)
 pie(dist, labels=paste(labels,"%",sep=''), col=c("blue","red"))
 
 
+
 #---Analysis on Author---#
+
+dbGetQuery(db, 'SELECT * FROM Joined_Data GROUP BY member_id')
 
 
 
