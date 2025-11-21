@@ -1,3 +1,4 @@
+###Load, Clean, Exploratory Data Analysis
 
 #--- Load CSV Files---#
 member_data <- read.csv("C:/Users/vee10/Downloads/CapitolTrack/Data/Members.csv")
@@ -117,6 +118,7 @@ party_success <- dbGetQuery(db, 'SELECT party, COUNT(*) as authored,
                            ORDER BY pass_rate DESC')
 party_success
 
+
 #---Analysis on Author---#
 
 
@@ -192,7 +194,26 @@ comm_success <- dbGetQuery(db, 'SELECT author,
 comm_success
 
 
+#---Analysis on Location---#
 
+#success rates for each location
+loc_success <- dbGetQuery(db, 'SELECT location_code,
+                  COUNT(*) AS n_measures, SUM(outcome="P") AS passed,
+                  ROUND(SUM(outcome = "P") * 1.0 / COUNT(*), 3) AS pass_rate
+                  FROM Joined_Data
+                  GROUP BY location_code
+                  ORDER BY pass_rate DESC')
+loc_success
 
+#failure rates for each location
+loc_fail<- dbGetQuery(db, 'SELECT location_code,
+                  COUNT(*) AS n_measures, SUM(outcome="P") AS passed,
+                  ROUND(SUM(outcome = "F") * 1.0 / COUNT(*), 3) AS pass_rate
+                  FROM Joined_Data
+                  GROUP BY location_code
+                  ORDER BY pass_rate DESC')
+loc_fail
+
+#---Analysis based on Month---#
 
 
