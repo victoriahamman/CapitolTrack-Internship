@@ -14,6 +14,7 @@ library(tidyverse)
 library(janitor)
 library(stringr)
 library(DBI)
+library(ggplot2)
 
 
 #--- Clean Data ---#
@@ -118,6 +119,9 @@ party_success <- dbGetQuery(db, 'SELECT party, COUNT(*) as authored,
                            ORDER BY pass_rate DESC')
 party_success
 
+ggplot(party_success, aes(x=party, y=pass_rate)) +
+  geom_col() + labs(title="Porbability of Passing by Party", y="Pass Rate")
+
 
 #---Analysis on Author---#
 
@@ -131,30 +135,30 @@ view(dbGetQuery(db, 'SELECT * FROM Sorted_Members'))
 
 
 #author success rates
-author_success <- dbGetQuery(db, 'SELECT member_id, author, f_name,
+mem_success <- dbGetQuery(db, 'SELECT member_id, author, f_name,
                   COUNT(*) AS authored, SUM(outcome="P") AS passed,
                   ROUND(SUM(outcome = "P") * 1.0 / COUNT(*), 3) AS pass_rate
                  FROM Sorted_Members
                  GROUP BY member_id, author, f_name
-                 ORDER BY pass_rate, DESC')
-author_success
+                 ORDER BY pass_rate DESC')
+mem_success
 
 #top 10 members in number of measures authored
-top_10_authored <- dbGetQuery(db, 'SELECT member_id, author, f_name,
+top_10_mems_authored <- dbGetQuery(db, 'SELECT member_id, author, f_name,
                   COUNT(measure) AS n_measures FROM Sorted_Members
                   GROUP BY member_id, author
                   ORDER BY n_measures DESC LIMIT 10')
-top_10_authored
+top_10_mems_authored
 
 #top_10 in number of measures passed
-top_passed <- dbGetQuery(db, 'SELECT member_id, author, f_name,
+top_mems_passed <- dbGetQuery(db, 'SELECT member_id, author, f_name,
                          COUNT(measure) as passed_measures 
                          FROM Sorted_Members
                          WHERE outcome="P"
                          GROUP BY member_id, author, f_name
                          ORDER BY passed_measures DESC 
                          LIMIT 10')
-top_passed
+top_mems_passed
 
 
 #--If author is a committee--#
@@ -167,22 +171,22 @@ view(dbGetQuery(db, 'SELECT * FROM Sorted_Comms'))
 
 
 #top 10 committees in number of measures authored
-top_10_authored <- dbGetQuery(db, 'SELECT author,
+top_10_comms_authored <- dbGetQuery(db, 'SELECT author,
                   COUNT(measure) AS n_measures 
                   FROM Sorted_Comms
                   GROUP BY author
                   ORDER BY n_measures DESC LIMIT 10')
-top_10_authored
+top_10_comms_authored
 
 #top 10 committees in number of measures passed
-top_passed <- dbGetQuery(db, 'SELECT author,
+top_comms_passed <- dbGetQuery(db, 'SELECT author,
                          COUNT(measure) as passed_measures 
                          FROM Sorted_Comms
                          WHERE outcome="P"
                          GROUP BY author
                          ORDER BY passed_measures DESC 
                          LIMIT 10')
-top_passed
+top_comms_passed
 
 #committee success rates
 comm_success <- dbGetQuery(db, 'SELECT author,
@@ -214,6 +218,48 @@ loc_fail<- dbGetQuery(db, 'SELECT location_code,
                   ORDER BY pass_rate DESC')
 loc_fail
 
-#---Analysis based on Month---#
+
+##--Probability Analyses--##
+
+
+##for member authors
+prob <- dbGetQuery(db, 'SELECT * FROM Joined_Data WHERE party IS NOT NULL
+                    AND outcome IS NOT NULL')
+prob$passed <- ifelse(prob$outcome == "P", 1, 0)
+
+
+#model probability of passing for passed based on only party
+model_party <- glm(passed ~ party, data=prob, family=binomial)
+summary(model_party)
+
+#model probability of passing based on party and author
+model_party_author <- glm(passed ~ party + factor(author), data=prob, family=binomial)
+summary(model_party_author)
+
+#model probability of passing based on party and location
+model_party_loc <- glm(passed ~ party + factor(location_code), data=prob, family=binomial)
+summary(model_party_loc)
+
+#model probability of passing based on party, author, and location
+model_all <- glm(passed ~ party + factor(author) + factor(location_code), data=prob, family=binomial)
+summary(model_all)
+
+
+
+##for committee authors
+prob_comm <- dbGetQuery(db, 'SELECT * FROM Joined_Data WHERE party IS NULL
+                    AND outcome IS NOT NULL')
+prob_comm$passed <- ifelse(prob_comm$outcome == "P", 1, 0)
+
+
+
+#model probability of passing based on author
+comm_model_author <- glm(passed ~ factor(author), data=prob_comm, family=binomial)
+summary(comm_model_author)
+
+#model probability of passing based on author and location
+comm_model_author_loc <- glm(passed ~ factor(author) + factor(location_code), data=prob_comm, family=binomial)
+summary(comm_model_author_loc)
+
 
 
