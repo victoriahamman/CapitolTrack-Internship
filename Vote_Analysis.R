@@ -127,6 +127,16 @@ sorted_members <- dbGetQuery(db, 'SELECT * FROM Joined_Data
 dbWriteTable(db, "Sorted_Members", sorted_members, overwrite=T)
 view(dbGetQuery(db, 'SELECT * FROM Sorted_Members'))
 
+
+#author success rates
+author_success <- dbGetQuery(db, 'SELECT member_id, author, f_name,
+                  COUNT(*) AS authored, SUM(outcome="P") AS passed,
+                  ROUND(SUM(outcome = "P") * 1.0 / COUNT(*), 3) AS pass_rate
+                 FROM Sorted_Members
+                 GROUP BY member_id, author, f_name
+                 ORDER BY pass_rate, DESC')
+author_success
+
 #top 10 members in number of measures authored
 top_10_authored <- dbGetQuery(db, 'SELECT member_id, author, f_name,
                   COUNT(measure) AS n_measures FROM Sorted_Members
@@ -134,7 +144,7 @@ top_10_authored <- dbGetQuery(db, 'SELECT member_id, author, f_name,
                   ORDER BY n_measures DESC LIMIT 10')
 top_10_authored
 
-#top_10 in number of measures passes
+#top_10 in number of measures passed
 top_passed <- dbGetQuery(db, 'SELECT member_id, author, f_name,
                          COUNT(measure) as passed_measures 
                          FROM Sorted_Members
@@ -144,18 +154,9 @@ top_passed <- dbGetQuery(db, 'SELECT member_id, author, f_name,
                          LIMIT 10')
 top_passed
 
-#author success rates
-author_success <- dbGetQuery(db, 'SELECT member_id, author, f_name,
-                                    COUNT(*) AS authored, SUM(outcome="P") AS passed,
-                                    ROUND(SUM(outcome = "P") * 1.0 / COUNT(*), 3) AS pass_rate
-                                  FROM Sorted_Members
-                                  GROUP BY member_id, author, f_name
-                                  ORDER BY pass_rate DESC
-                             ')
-author_success
-
 
 #--If author is a committee--#
+
 sorted_comms <- dbGetQuery(db, 'SELECT * FROM Votes
                                 WHERE member_id IS NULL
                                 ORDER BY author')
@@ -163,8 +164,32 @@ dbWriteTable(db, "Sorted_Comms", sorted_comms, overwrite=T)
 view(dbGetQuery(db, 'SELECT * FROM Sorted_Comms'))
 
 
+#top 10 committees in number of measures authored
+top_10_authored <- dbGetQuery(db, 'SELECT author,
+                  COUNT(measure) AS n_measures 
+                  FROM Sorted_Comms
+                  GROUP BY author
+                  ORDER BY n_measures DESC LIMIT 10')
+top_10_authored
 
+#top 10 committees in number of measures passed
+top_passed <- dbGetQuery(db, 'SELECT author,
+                         COUNT(measure) as passed_measures 
+                         FROM Sorted_Comms
+                         WHERE outcome="P"
+                         GROUP BY author
+                         ORDER BY passed_measures DESC 
+                         LIMIT 10')
+top_passed
 
+#committee success rates
+comm_success <- dbGetQuery(db, 'SELECT author,
+                  COUNT(*) AS n_measures, SUM(outcome="P") AS passed,
+                  ROUND(SUM(outcome = "P") * 1.0 / COUNT(*), 3) AS pass_rate
+                  FROM Sorted_Comms
+                  GROUP BY author
+                  ORDER BY pass_rate DESC')
+comm_success
 
 
 
